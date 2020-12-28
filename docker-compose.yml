@@ -1,0 +1,7 @@
+version: '3'
+services:
+  package:
+    build: .
+    container_name: tombstone-redis
+    volumes:
+    - ./:/package:cached
