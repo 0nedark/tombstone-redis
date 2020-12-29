@@ -1,7 +1,11 @@
 version: '3'
 services:
-  package:
+  tombstone-redis-library:
     build: .
-    container_name: tombstone-redis
+    container_name: tombstone-redis-library
     volumes:
     - ./:/package:cached
+
+  tombstone-redis-test:
+    container_name: tombstone-redis-test
+    image: redis:6-alpine

@@ -1,20 +1,34 @@
-.PHONY: build
-build:
-	docker-compose build --pull
-	docker-compose up -d
+.DEFAULT_GOAL := up
 
-.PHONY: start
-start:
+.PHONY: up
+up:
+	$(MAKE) down
 	docker-compose up -d
 
 .PHONY: down
 down:
-	docker-compose down
+	docker-compose down --remove-orphans
+
+.PHONY: build
+build:
+	docker-compose build
+	$(MAKE) up
 
 .PHONY: shell
 shell:
-	docker exec -it tombstone-redis sh
+	docker exec -it tombstone-redis-library sh
+
+.PHONY: test
+test:
+	docker exec -it tombstone-redis-library vendor/bin/phpunit tests/${filter}
 
 .PHONY: logs
 logs:
-	docker-compose logs -f --tail=100
+	@docker-compose logs -f --tail=100
+
+.PHONY: setup
+setup:
+	$(MAKE) down
+	rm -fr ./vendor
+	$(MAKE) up
+	docker exec -it tombstone-redis-library composer install

@@ -1,13 +1,20 @@
-FROM php:7.1-cli-alpine
+FROM php:7.1-cli-alpine3.10
 
-RUN apk update && apk add composer
+RUN apk add --no-cache --update composer
+
+RUN curl -L -o /tmp/redis.tar.gz https://github.com/phpredis/phpredis/archive/5.3.2.tar.gz \
+    && tar xfz /tmp/redis.tar.gz \
+    && rm -r /tmp/redis.tar.gz \
+    && mkdir -p /usr/src/php/ext \
+    && mv phpredis-5.3.2 /usr/src/php/ext/redis \
+    && docker-php-ext-install redis
 
 WORKDIR /package
-#COPY composer.json /package
-#COPY composer.lock /package
-#RUN composer install --no-scripts --no-autoloader --no-dev
 
-COPY . /package
-#RUN composer dump-autoload
+COPY ./composer.* ./
+RUN composer install -n --no-autoloader --no-scripts --no-progress --no-suggest
 
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+COPY . .
+RUN composer dump-autoload -o -n
+
+ENTRYPOINT tail -f /dev/null
