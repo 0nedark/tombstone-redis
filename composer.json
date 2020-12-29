@@ -1,5 +1,5 @@
 {
-    "name": "Onedark/tombstone-redis",
+    "name": "0nedark/tombstone-redis",
     "autoload": {
         "psr-4": {
             "OneDark\\TombstoneRedis\\": "src/"
