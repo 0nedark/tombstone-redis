@@ -20,9 +20,14 @@ class AnalyzerRedisHandler extends AbstractHandler
      * @var int
      */
     private $sizeLimit;
+    /**
+     * @var string
+     */
+    private $root;
 
     public function __construct(Redis $client, int $sizeLimit = 1000)
     {
+        $this->root = getenv('REDIS_TOMBSTONE_PATH') ?: 'tombstones';
         $this->client = $client;
         $this->sizeLimit = $sizeLimit;
     }
@@ -43,7 +48,7 @@ class AnalyzerRedisHandler extends AbstractHandler
         $date = date('Ymd');
         $hash = $vampire->getTombstone()->getHash();
 
-        return sprintf('%s-%s.tombstone', $hash, $date);
+        return $this->root . ':' . sprintf('%s-%s.tombstone', $hash, $date);
     }
 
     protected function getDefaultFormatter(): FormatterInterface
