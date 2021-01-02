@@ -3,8 +3,8 @@
     "autoload": {
         "psr-4": {
             "OneDark\\TombstoneRedis\\": "src/",
-            "OneDark\\TombstoneRedis\\Constants": "constants/",
-            "OneDark\\TombstoneRedis\\Contracts": "contracts/"
+            "OneDark\\TombstoneRedis\\Constants\\": "constants/",
+            "OneDark\\TombstoneRedis\\Contracts\\": "contracts/"
         }
     },
     "description": "An extension for scheb/tombstone package that adds redis support",
