@@ -35,7 +35,7 @@ class AnalyzerRedisProvider implements LogProviderInterface
 
     public function __construct(array $config, RootPath $rootDir, ConsoleOutputInterface $output)
     {
-        if (!isset($config['redis']['singleton'])) {
+        if (!isset($config['driver']['redis']['singleton'])) {
             throw new \Exception('RedisAnalizer requires config["redis"]["singleton"] to be set');
         }
 
