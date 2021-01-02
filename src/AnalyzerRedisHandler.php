@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneDark\TombstoneRedis;
 
+use OneDark\TombstoneRedis\Constants\Expire;
 use Redis;
 use Scheb\Tombstone\Core\Model\Vampire;
 use Scheb\Tombstone\Logger\Formatter\AnalyzerLogFormatter;
@@ -17,30 +18,28 @@ class AnalyzerRedisHandler extends AbstractHandler
      */
     private $client;
     /**
-     * @var int
-     */
-    private $sizeLimit;
-    /**
      * @var string
      */
     private $root;
+    /**
+     * @var int
+     */
+    private $expire;
 
-    public function __construct(Redis $client, int $sizeLimit = 1000)
+    public function __construct(Redis $client, $path = 'tombstones', int $expire = Expire::FOUR_WEEKS)
     {
-        $this->root = getenv('REDIS_TOMBSTONE_PATH') ?: 'tombstones';
         $this->client = $client;
-        $this->sizeLimit = $sizeLimit;
+        $this->root = $path;
+        $this->expire = $expire;
     }
 
     public function log(Vampire $vampire): void
     {
-        $this->client->xAdd(
-            $this->getLogKey($vampire),
-            '*',
-            ['data' => $this->getFormatter()->format($vampire)],
-            $this->sizeLimit,
-            true
-        );
+        $key = $this->getLogKey($vampire);
+        $value = json_encode($this->getFormatter()->format($vampire));
+
+        $this->client->set($key, $value);
+        $this->client->expire($key, $this->expire);
     }
 
     private function getLogKey(Vampire $vampire): string

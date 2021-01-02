@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneDark\TombstoneRedis;
 
+use OneDark\TombstoneRedis\Contracts\RedisSingletonInterface;
 use Redis;
 use Scheb\Tombstone\Analyzer\Cli\ConsoleOutputInterface;
 use Scheb\Tombstone\Analyzer\Log\LogProviderInterface;
@@ -32,36 +33,30 @@ class AnalyzerRedisProvider implements LogProviderInterface
      */
     private $root;
 
-    public function __construct(RootPath $rootDir, ConsoleOutputInterface $output)
+    public function __construct(array $config, RootPath $rootDir, ConsoleOutputInterface $output)
     {
-        $redis = $redis = new Redis();
-        $password = getenv('REDIS_PASSWORD') ?: null;
-
-        if ($password !== null) {
-            $redis->auth($password);
+        if (!isset($config['redis']['singleton'])) {
+            throw new \Exception('RedisAnalizer requires config["redis"]["singleton"] to be set');
         }
 
-        $redis->connect(
-            getenv('REDIS_HOST') ?: '',
-            getenv('REDIS_PORT') ?: 6379,
-            getenv('REDIS_TIMEOUT') ?: 0.0,
-            getenv('REDIS_RESERVED') ?: null,
-            getenv('REDIS_RETRY_INTERVAL') ?: 0,
-            getenv('REDIS_READ_TIMEOUT') ?: 0.0
-        );
+        $className = $config['driver']['redis']['singleton'];
+        $reflectionClass = new \ReflectionClass($className);
+        if (!$reflectionClass->implementsInterface(RedisSingletonInterface::class)) {
+            throw new \Exception(sprintf('Class %s must implement %s', $className, RedisSingletonInterface::class));
+        }
+
+        $this->redis = $reflectionClass->getMethod('instance')->invoke(null);
 
         $this->rootDir = $rootDir;
-        $this->redis = $redis;
-
         $this->output = $output;
-        $this->root = getenv('REDIS_TOMBSTONE_PATH') ?: 'tombstones';
+        $this->root = $config['driver']['redis']['path'] ?: 'tombstones';
     }
 
     public static function create(array $config, ConsoleOutputInterface $consoleOutput): LogProviderInterface
     {
         $rootDir = new RootPath($config['source_code']['root_directory']);
 
-        return new self($rootDir, $consoleOutput);
+        return new self($config, $rootDir, $consoleOutput);
     }
 
     public function getVampires(): iterable
@@ -72,11 +67,8 @@ class AnalyzerRedisProvider implements LogProviderInterface
         $progress = $this->output->createProgressBar(count($files));
 
         foreach ($files as $file) {
-            foreach ($this->redis->xRead([$file => '0-0']) as $rows) {
-                foreach ($rows as $timestamp => $line) {
-                    yield AnalyzerLogFormat::logToVampire($line['data'], $this->rootDir);
-                }
-            }
+            $line = json_decode($this->redis->get($file));
+            yield AnalyzerLogFormat::logToVampire($line, $this->rootDir);
             $progress->advance();
         }
         $this->output->writeln();
