@@ -67,7 +67,7 @@ class AnalyzerRedisProvider implements LogProviderInterface
         $progress = $this->output->createProgressBar(count($files));
 
         foreach ($files as $file) {
-            $line = json_decode($this->redis->get($file));
+            $line = $this->redis->get($file);
             yield AnalyzerLogFormat::logToVampire($line, $this->rootDir);
             $progress->advance();
         }

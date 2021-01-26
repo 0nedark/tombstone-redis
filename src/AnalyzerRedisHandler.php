@@ -36,9 +36,7 @@ class AnalyzerRedisHandler extends AbstractHandler
     public function log(Vampire $vampire): void
     {
         $key = $this->getLogKey($vampire);
-        $value = json_encode($this->getFormatter()->format($vampire));
-
-        $this->client->set($key, $value);
+        $this->client->set($key, $this->getFormatter()->format($vampire));
         $this->client->expire($key, $this->expire);
     }
 
