@@ -25,7 +25,7 @@ class LoggerStackTraceHandler extends AbstractHandler
      */
     private $expire;
 
-    public function __construct(Redis $client, $path = 'tombstones', $expire = Expire::FOUR_WEEKS)
+    public function __construct(Redis $client, $path = 'tombstones', $expire = Expire::TWO_DAYS)
     {
         $this->client = $client;
         $this->root = $path;
