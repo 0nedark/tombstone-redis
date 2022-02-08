@@ -61,7 +61,7 @@ class AnalyzerRedisProvider implements LogProviderInterface
 
     public function getVampires(): iterable
     {
-        $batchKeys = $this->redis->keys($this->root);
+        $batchKeys = $this->redis->keys($this->root . ':*');
         $this->output->writeln('Extracting tombstone data ...');
         $progress = $this->output->createProgressBar(count($batchKeys));
 
