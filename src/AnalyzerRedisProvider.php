@@ -35,11 +35,11 @@ class AnalyzerRedisProvider implements LogProviderInterface
 
     public function __construct(array $config, RootPath $rootDir, ConsoleOutputInterface $output)
     {
-        if (!isset($config['driver']['redis']['class'])) {
-            throw new \Exception('RedisAnalyzer requires config["driver"]["redis"]["class"] to be set');
+        if (!isset($config['driver']['redis']['singleton'])) {
+            throw new \Exception('RedisAnalyzer requires config["driver"]["redis"]["singleton"] to be set');
         }
 
-        $className = $config['driver']['redis']['class'];
+        $className = $config['driver']['redis']['singleton'];
         $reflectionClass = new \ReflectionClass($className);
         if (!$reflectionClass->implementsInterface(RedisSingletonInterface::class)) {
             throw new \Exception(sprintf('Class %s must implement %s', $className, RedisSingletonInterface::class));
