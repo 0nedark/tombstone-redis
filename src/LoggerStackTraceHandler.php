@@ -24,12 +24,27 @@ class LoggerStackTraceHandler extends AbstractHandler
      * @var int
      */
     private $expire;
+    /**
+     * @var array
+     */
+    private $traces = [];
+    /**
+     * @var string
+     */
+    private $cummulativeKey = '';
 
-    public function __construct(Redis $client, $path = 'tombstones', $expire = Expire::TWO_DAYS)
+    public function __construct(Redis $client, $path = 'tombstones-traces', $expire = Expire::TWO_DAYS)
     {
         $this->client = $client;
         $this->root = $path;
         $this->expire = $expire;
+    }
+
+    public function flush(): void
+    {
+        $key = $this->root . ':' . hash('sha512', $this->cummulativeKey);
+        $this->client->set($key, json_encode($this->traces));
+        $this->client->expire($key, $this->expire);
     }
 
     public function log(Vampire $vampire): void
@@ -50,16 +65,10 @@ class LoggerStackTraceHandler extends AbstractHandler
         foreach ($traces as $trace) {
             $path[] = $trace['file'] . '|' . $trace['line'];
             $trace['created_at'] = new DateTime();
-            $key = $this->getLogKey($path);
-            $value = json_encode($trace);
 
-            $this->client->set($key, $value);
-            $this->client->expire($key, $this->expire);
+            $key = $this->root . ':' . implode(':', $path);
+            $this->cummulativeKey .= $key;
+            $this->traces[$key] = $trace;
         }
-    }
-
-    private function getLogKey(array $path): string
-    {
-        return $this->root . ':traces:' . implode(':', $path);
     }
 }

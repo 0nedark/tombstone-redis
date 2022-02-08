@@ -35,11 +35,11 @@ class AnalyzerRedisProvider implements LogProviderInterface
 
     public function __construct(array $config, RootPath $rootDir, ConsoleOutputInterface $output)
     {
-        if (!isset($config['driver']['redis']['singleton'])) {
-            throw new \Exception('RedisAnalizer requires config["redis"]["singleton"] to be set');
+        if (!isset($config['logs']['custom']['class'])) {
+            throw new \Exception('RedisAnalyzer requires config["logs"]["custom"]["class"] to be set');
         }
 
-        $className = $config['driver']['redis']['singleton'];
+        $className = $config['logs']['custom']['class'];
         $reflectionClass = new \ReflectionClass($className);
         if (!$reflectionClass->implementsInterface(RedisSingletonInterface::class)) {
             throw new \Exception(sprintf('Class %s must implement %s', $className, RedisSingletonInterface::class));
@@ -49,7 +49,7 @@ class AnalyzerRedisProvider implements LogProviderInterface
 
         $this->rootDir = $rootDir;
         $this->output = $output;
-        $this->root = $config['driver']['redis']['path'] ?: 'tombstones';
+        $this->root = $config['driver']['redis']['path'] ?: 'tombstones-logs';
     }
 
     public static function create(array $config, ConsoleOutputInterface $consoleOutput): LogProviderInterface
@@ -61,16 +61,27 @@ class AnalyzerRedisProvider implements LogProviderInterface
 
     public function getVampires(): iterable
     {
-        $files = $this->redis->keys($this->root . ':*.tombstone');
+        $batchKeys = $this->redis->keys($this->root);
+        $this->output->writeln('Extracting tombstone data ...');
+        $progress = $this->output->createProgressBar(count($batchKeys));
 
-        $this->output->writeln('Read analyzer log data ...');
-        $progress = $this->output->createProgressBar(count($files));
-
-        foreach ($files as $file) {
-            $line = $this->redis->get($file);
-            yield AnalyzerLogFormat::logToVampire($line, $this->rootDir);
+        $batches = [];
+        foreach ($batchKeys as $batchKey) {
+            $batch = $this->redis->get($batchKey);
+            $batches[] = json_decode($batch);
             $progress->advance();
         }
+
+        $this->output->writeln('Analyzing tombstone data ...');
+        $progress = $this->output->createProgressBar(count($batches));
+
+        foreach ($batches as $batch) {
+            foreach ($batch as $line) {
+                yield AnalyzerLogFormat::logToVampire($line, $this->rootDir);
+            }
+            $progress->advance();
+        }
+
         $this->output->writeln();
     }
 }

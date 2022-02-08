@@ -25,27 +25,37 @@ class AnalyzerRedisHandler extends AbstractHandler
      * @var int
      */
     private $expire;
+    /**
+     * @var array
+     */
+    private $vampires = [];
+    /**
+     * @var string
+     */
+    private $cummulativeKey = '';
 
-    public function __construct(Redis $client, $path = 'tombstones', int $expire = Expire::FOUR_WEEKS)
+    public function __construct(Redis $client, $path = 'tombstones-logs', int $expire = Expire::FOUR_WEEKS)
     {
         $this->client = $client;
         $this->root = $path;
         $this->expire = $expire;
     }
 
-    public function log(Vampire $vampire): void
+    public function flush(): void
     {
-        $key = $this->getLogKey($vampire);
-        $this->client->set($key, $this->getFormatter()->format($vampire));
+        $key = $this->root . ':' . hash('sha512', $this->cummulativeKey);
+        $this->client->set($key, json_encode($this->vampires));
         $this->client->expire($key, $this->expire);
     }
 
-    private function getLogKey(Vampire $vampire): string
+    public function log(Vampire $vampire): void
     {
         $date = date('Ymd');
         $hash = $vampire->getTombstone()->getHash();
+        $key = $this->root . ':' . sprintf('%s-%s.tombstone', $hash, $date);
 
-        return $this->root . ':' . sprintf('%s-%s.tombstone', $hash, $date);
+        $this->cummulativeKey .= $key;
+        $this->vampires[$key] = $this->getFormatter()->format($vampire);
     }
 
     protected function getDefaultFormatter(): FormatterInterface
